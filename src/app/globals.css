@@ -2,6 +2,268 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  /* Book and Page Styles */
+  .book {
+    transform-style: preserve-3d;
+    perspective: 2000px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .book {
+      padding: 2rem;
+    }
+  }
+
+  .page {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transition: all 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+    cursor: pointer;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 639px) {
+    .page {
+      transform-origin: bottom center;
+    }
+
+    .page:hover {
+      transform: rotateX(-15deg) !important;
+    }
+
+    .page.flipped {
+      transform: rotateX(-180deg) !important;
+    }
+
+    .page.flipped:hover {
+      transform: rotateX(-165deg) !important;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .page:hover {
+      transform: rotateY(-15deg);
+    }
+
+    .page.flipped {
+      transform: rotateY(-180deg);
+    }
+
+    .page.flipped:hover {
+      transform: rotateY(-165deg);
+    }
+  }
+
+  .page-front,
+  .page-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    padding: 1rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+
+  @media (min-width: 640px) {
+    .page-front,
+    .page-back {
+      padding: 2rem;
+    }
+  }
+
+  .page-front::-webkit-scrollbar,
+  .page-back::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  @media (min-width: 640px) {
+    .page-front::-webkit-scrollbar,
+    .page-back::-webkit-scrollbar {
+      width: 6px;
+    }
+  }
+
+  .page-front::-webkit-scrollbar-track,
+  .page-back::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .page-front::-webkit-scrollbar-thumb,
+  .page-back::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .page-front {
+    background: white;
+    transform: rotateY(0deg);
+  }
+
+  @media (max-width: 639px) {
+    .page-front {
+      transform: rotateX(0deg);
+    }
+  }
+
+  .page-back {
+    background: #f8f8f8;
+    transform: rotateY(180deg);
+  }
+
+  @media (max-width: 639px) {
+    .page-back {
+      transform: rotateX(180deg);
+    }
+  }
+
+  /* Page Effects */
+  .page-curl {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page-curl::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(to right, 
+      transparent, 
+      rgba(0, 0, 0, 0.05) 40%, 
+      rgba(0, 0, 0, 0.1)
+    );
+    transform-origin: right;
+    transition: transform 0.3s ease;
+  }
+
+  @media (min-width: 640px) {
+    .page-curl::before {
+      width: 40px;
+    }
+  }
+
+  .page-shadow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.1), transparent);
+    transform-origin: left;
+    transition: all 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+    pointer-events: none;
+  }
+
+  @media (min-width: 640px) {
+    .page-shadow {
+      width: 30px;
+    }
+  }
+
+  /* Book Shadow */
+  .book-shadow {
+    position: relative;
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .book-shadow {
+      padding: 2rem;
+    }
+  }
+
+  .book-shadow::after {
+    content: '';
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    height: 10px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0.2) 0%,
+      rgba(0, 0, 0, 0.1) 50%,
+      transparent 100%
+    );
+    filter: blur(3px);
+    transition: all 0.3s ease;
+  }
+
+  @media (min-width: 640px) {
+    .book-shadow::after {
+      bottom: 1rem;
+      height: 20px;
+      filter: blur(5px);
+    }
+  }
+
+  /* Page Numbers */
+  .page-number {
+    position: absolute;
+    bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: #666;
+    transition: all 0.3s ease;
+  }
+
+  @media (min-width: 640px) {
+    .page-number {
+      bottom: 1rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  .page-number-left {
+    left: 1rem;
+  }
+
+  .page-number-right {
+    right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .page-number-left {
+      left: 2rem;
+    }
+
+    .page-number-right {
+      right: 2rem;
+    }
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
