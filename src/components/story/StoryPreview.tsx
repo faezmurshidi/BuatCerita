@@ -28,6 +28,7 @@ export function StoryPreview({ story }: StoryPreviewProps) {
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
     null
   );
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -83,6 +84,7 @@ export function StoryPreview({ story }: StoryPreviewProps) {
       }
 
       const data = await response.json();
+      setAudioBase64(data.audio);
       const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
 
       audio.addEventListener("ended", () => {
@@ -105,6 +107,29 @@ export function StoryPreview({ story }: StoryPreviewProps) {
     } finally {
       setIsGeneratingSpeech(false);
     }
+  };
+
+  const downloadAudio = () => {
+    if (!audioBase64 || !story) return;
+
+    // Convert base64 to blob
+    const byteCharacters = atob(audioBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: "audio/mpeg" });
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${story.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const togglePlayback = async () => {
@@ -236,7 +261,7 @@ export function StoryPreview({ story }: StoryPreviewProps) {
       </div>
 
       {/* Audio Controls */}
-      <div className="flex justify-center">
+      <div className="flex justify-center space-x-4">
         <button
           onClick={togglePlayback}
           disabled={isGeneratingSpeech}
@@ -311,6 +336,28 @@ export function StoryPreview({ story }: StoryPreviewProps) {
             </>
           )}
         </button>
+
+        {audioBase64 && (
+          <button
+            onClick={downloadAudio}
+            className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg py-2 px-4 font-medium transition-all hover:opacity-90 hover:scale-105"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            <span>Download Audio</span>
+          </button>
+        )}
       </div>
 
       {/* Story Content */}

@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import testData from './test.json'
 
 const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY || "",
 })
 
 // Token estimation for a children's story
-const MAX_TOKENS = 4096
+const MAX_TOKENS = 5000
 
 interface Character {
   name: string
@@ -115,14 +116,6 @@ function cleanJsonString(str: string): string {
     currentIndex++
   }
 
-  // Validate the cleaned JSON
-  try {
-    JSON.parse(result)
-  } catch (error) {
-    console.error('Failed to validate cleaned JSON:', error)
-    throw new Error('Failed to produce valid JSON after cleaning')
-  }
-
   return result
 }
 
@@ -189,45 +182,46 @@ Format the response as a JSON object with this structure:
 
     console.log('Sending prompt to Claude:', prompt)
 
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: MAX_TOKENS,
-      temperature: 0.7,
-      system:
-        "You are a talented children's book author. Create engaging, age-appropriate stories with clear moral lessons. Use simple language and vivid descriptions. Always return properly formatted JSON matching the requested structure exactly.",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    })
-
-    console.log('Raw Claude response:', message)
-
-    if (!message.content[0] || message.content[0].type !== 'text') {
-      throw new Error('Invalid response format from Claude API')
-    }
-
-    const responseText = message.content[0].text
-    console.log('Claude response text:', responseText)
-
     let storyData: StoryResponse
-    try {
-      // Clean and parse the response
-      const cleanedJson = cleanJsonString(responseText)
-      console.log('Cleaned JSON:', cleanedJson)
-      storyData = JSON.parse(cleanedJson)
-      console.log('Parsed story data:', storyData)
-    } catch (error) {
-      console.error("Failed to parse story response:", error)
-      return NextResponse.json(
-        { 
-          error: "Failed to generate story",
-          details: error instanceof Error ? error.message : "Unknown error"
-        },
-        { status: 500 }
-      )
+
+    // Use test data in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Using test data in development mode')
+      storyData = testData as StoryResponse
+    } else {
+      const message = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        max_tokens: MAX_TOKENS,
+        temperature: 0.7,
+        system:
+          "You are a talented children's book author. Create engaging, age-appropriate stories with clear moral lessons. Use simple language and vivid descriptions. Always return properly formatted JSON matching the requested structure exactly.",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      })
+
+      console.log('Raw Claude response:', message)
+
+      if (!message.content[0] || message.content[0].type !== 'text') {
+        throw new Error('Invalid response format from Claude API')
+      }
+
+      const responseText = message.content[0].text
+      console.log('Claude response text:', responseText)
+
+      try {
+        // Clean and parse the response
+        const cleanedJson = cleanJsonString(responseText)
+        console.log('Cleaned JSON:', cleanedJson)
+        storyData = JSON.parse(cleanedJson)
+        console.log('Parsed story data:', storyData)
+      } catch (error) {
+        console.error("Failed to parse story response:", error)
+        throw error
+      }
     }
 
     return NextResponse.json(storyData)
