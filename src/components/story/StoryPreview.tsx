@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { cn } from '@/lib/utils';
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer';
 import { useAudioGeneration } from '@/lib/hooks/useAudioGeneration';
 

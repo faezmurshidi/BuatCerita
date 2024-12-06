@@ -83,7 +83,7 @@ Make the story engaging and appropriate for the target age group. The entire sto
       ],
     });
 
-    if (!response.content[0] || !response.content[0].text) {
+    if (!response.content[0] || !('text' in response.content[0])) {
       throw new Error("Invalid response from Claude API");
     }
 

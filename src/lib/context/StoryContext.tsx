@@ -4,7 +4,8 @@ interface Story {
   title: string;
   content: string;
   moralLesson: string;
-  suggestedIllustrations: string[];
+  suggestedIllustrations?: string[];
+  language?: string;
 }
 
 interface StoryContextType {
@@ -12,11 +13,11 @@ interface StoryContextType {
   setStory: (story: Story | null) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  error: any;
-  setError: (error: any) => void;
+  error: string | null;
+  setError: (error: string | null) => void;
 }
 
-const StoryContext = createContext<StoryContextType | undefined>(undefined);
+const StoryContext = createContext<StoryContextType | null>(null);
 
 export function StoryProvider({ children }: { children: ReactNode }) {
   const [story, setStory] = useState<Story | null>(null);
@@ -41,7 +42,7 @@ export function StoryProvider({ children }: { children: ReactNode }) {
 
 export function useStory() {
   const context = useContext(StoryContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useStory must be used within a StoryProvider");
   }
   return context;

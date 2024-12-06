@@ -6,7 +6,7 @@ if (!process.env.HUGGINGFACE_API_KEY) {
 
 export async function POST(request: Request) {
   try {
-    const { prompt, controlImage } = await request.json();
+    const { prompt } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(

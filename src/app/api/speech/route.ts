@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, language = "en" } = await request.json()
+    const { text } = await request.json()
 
     if (!process.env.ELEVEN_LABS_API_KEY) {
       throw new Error("Missing ELEVENLABS_API_KEY")
