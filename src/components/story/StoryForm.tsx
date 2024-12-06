@@ -11,6 +11,8 @@ interface StoryFormProps {
 export function StoryForm({ onGenerated }: StoryFormProps) {
   const { setStory, setIsLoading, setError, isLoading } = useStory();
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
 
   const [formData, setFormData] = useState({
     // Basic fields
@@ -38,6 +40,31 @@ export function StoryForm({ onGenerated }: StoryFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Skip password check in development
+    if (process.env.NODE_ENV === 'development') {
+      await generateStory();
+      return;
+    }
+
+    // Show password prompt if not already shown
+    if (!showPasswordPrompt) {
+      setShowPasswordPrompt(true);
+      return;
+    }
+
+    // Verify password
+    if (password === 'F@ez') {
+      await generateStory();
+      setShowPasswordPrompt(false);
+      setPassword('');
+    } else {
+      alert('Incorrect password');
+    }
+  };
+
+  // Move the story generation logic to a separate function
+  const generateStory = async () => {
     setIsLoading(true);
     setError(null);
 
@@ -47,18 +74,7 @@ export function StoryForm({ onGenerated }: StoryFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          storyAbout: formData.storyAbout,
-          settings: formData.settings,
-          ageRange: formData.ageRange,
-          language: formData.language,
-          genre: formData.genre,
-          tone: formData.tone,
-          length: formData.length,
-          moralLesson: formData.moralLesson,
-          characters: formData.characters,
-          plotTwist: formData.plotTwist,
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -268,6 +284,22 @@ export function StoryForm({ onGenerated }: StoryFormProps) {
         </div>
       )}
 
+      {/* Add password prompt */}
+      {showPasswordPrompt && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Enter Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+            placeholder="Enter password to generate story"
+          />
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={isLoading}
@@ -277,7 +309,7 @@ export function StoryForm({ onGenerated }: StoryFormProps) {
             : "bg-purple-600 hover:bg-purple-700"
         }`}
       >
-        {isLoading ? "Generating Story..." : "Generate Story"}
+        {isLoading ? "Generating Story..." : showPasswordPrompt ? "Submit Password" : "Generate Story"}
       </button>
     </form>
   );

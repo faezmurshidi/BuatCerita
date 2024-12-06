@@ -40,7 +40,7 @@ export default function StoryPage() {
         <section className="bg-white rounded-2xl shadow-xl p-8">
           <ImageGenerator />
           <Suspense fallback={<LoadingStory />}>
-            {story ? <StoryPreview story={story} /> : <LoadingStory />}
+            {story ? <StoryPreview {...story} /> : <LoadingStory />}
           </Suspense>
         </section>
       </div>

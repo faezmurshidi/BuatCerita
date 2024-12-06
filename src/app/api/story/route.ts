@@ -31,6 +31,7 @@ Main Story:
 - Core Idea: ${storyAbout}
 - Setting: ${settings}
 - Target Age: ${ageRange}
+- Pages: 10
 
 ${genre ? `Genre: ${genre}` : ''}
 ${tone ? `Tone: ${tone}` : ''}
@@ -39,11 +40,31 @@ ${moralLesson ? `Moral Lesson: ${moralLesson}` : ''}
 ${characters ? `Main Characters: ${characters}` : ''}
 ${plotTwist ? `Plot Twist: ${plotTwist}` : ''}
 
-Please provide the story in the following format:
+LANGUAGE REQUIREMENTS:
+
+- Use simple vocabulary (age appropriate)
+- Sentences: 10-15 words long
+- Maintain child-friendly tone
+- Include engaging descriptive elements
+- Expressive intonation - include descriptive expressions and clear line breaks
+
+LEARNING OBJECTIVE:
+
+- Subtle moral lesson
+- Positive value to be taught
+
+FINAL STORY REQUIREMENTS:
+
+- Compelling title
+- Coherent narrative
+- Positive, uplifting ending
+- Age-appropriate complexity
+
+Please provide the story in the following JSONformat:
 1. Title
 2. Story content (with proper paragraphs)
 3. Moral lesson
-4. 3 suggested illustrations (key scenes that would work well as illustrations)
+4. Cover Illustrations (be very creative and descriptive, be very specific on the characters physical appearance and the setting and the style of the illustrations)
 
 Make the story engaging and appropriate for the target age group. The entire story, including title and moral lesson, should be in ${language}.`;
 
@@ -53,7 +74,7 @@ Make the story engaging and appropriate for the target age group. The entire sto
       max_tokens: 4096,
       temperature: 0.7,
       system:
-        "You are a talented multilingual children's book author. Create engaging, age-appropriate stories with clear moral lessons. Use simple language and vivid descriptions appropriate for the requested language.",
+        "You are a award-winningtalented multilingual children's book author. Create engaging, age-appropriate stories with clear moral lessons. Use simple language and vivid descriptions appropriate for the requested language.",
       messages: [
         {
           role: "user",
@@ -67,6 +88,8 @@ Make the story engaging and appropriate for the target age group. The entire sto
     }
 
     const storyContent = response.content[0].text;
+
+    console.log('storyContent', storyContent);
 
     // Parse the story content
     const [title, ...rest] = storyContent.split("\n\n");
