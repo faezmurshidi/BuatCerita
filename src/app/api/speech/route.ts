@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY
-const VOICE_ID = 'pNInz6obpgDQGcFmaJgB' // Adam, good for storytelling
+const VOICE_ID = 'nPczCjzI2devNBz1zQrb' // Adam, good for storytelling
 
 export async function POST(request: NextRequest) {
   try {
