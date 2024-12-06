@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
+    "@huggingface/inference": "^2.8.1",
     "@types/jspdf": "^2.0.0",
     "jspdf": "^2.5.2",
     "next": "15.0.3",

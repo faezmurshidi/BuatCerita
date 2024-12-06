@@ -3,6 +3,7 @@
 import { StoryForm } from "@/components/story/StoryForm";
 import { StoryPreview } from "@/components/story/StoryPreview";
 import { useStory } from "@/lib/context/StoryContext";
+import ImageGenerator from "@/components/ImageGenerator";
 
 export default function Home() {
   const { story, isLoading, error } = useStory();
@@ -60,6 +61,8 @@ export default function Home() {
           </h2>
           <StoryPreview story={story} />
         </section>
+
+        <ImageGenerator />
       </div>
     </main>
   );
