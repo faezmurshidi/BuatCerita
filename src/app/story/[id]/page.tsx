@@ -38,8 +38,8 @@ export default function StoryPage() {
         </header>
 
         <section className="bg-white rounded-2xl shadow-xl p-8">
+          <ImageGenerator />
           <Suspense fallback={<LoadingStory />}>
-            <ImageGenerator />
             {story ? <StoryPreview story={story} /> : <LoadingStory />}
           </Suspense>
         </section>
