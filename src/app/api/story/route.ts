@@ -62,9 +62,9 @@ FINAL STORY REQUIREMENTS:
 
 Please provide the story in the following JSONformat:
 1. Title
-2. Story content (with proper paragraphs)
-3. Moral lesson
-4. Cover Illustrations (be very creative and descriptive, be very specific on the characters physical appearance and the setting and the style of the illustrations)
+2. Story - (with proper paragraphs)
+3. MoralLesson
+4. CoverIllustrations - (be very creative and descriptive, be very specific on the characters physical appearance and the setting and the style of the illustrations)
 
 Make the story engaging and appropriate for the target age group. The entire story, including title and moral lesson, should be in ${language}.`;
 
@@ -92,31 +92,19 @@ Make the story engaging and appropriate for the target age group. The entire sto
     console.log('storyContent', storyContent);
 
     // Parse the story content
-    const [title, ...rest] = storyContent.split("\n\n");
-    const content = rest.join("\n\n");
-
+    // Find the first occurrence of '{' and parse from there
+const jsonStartIndex = storyContent.indexOf('{');
+const jsonContent = storyContent.slice(jsonStartIndex);
     // Extract moral lesson and illustrations if they exist
-    const moralMatch = content.match(/Moral lesson:(.*?)(?=\n\nSuggested illustrations:|\n\n|$)/i);
-    const illustrationsMatch = content.match(/Suggested illustrations:(.*?)$/i);
-
-    const extractedMoralLesson = moralMatch ? moralMatch[1].trim() : "";
-    const suggestedIllustrations = illustrationsMatch
-      ? illustrationsMatch[1]
-          .split("\n")
-          .map((line: string) => line.replace(/^\d+\.\s*/, "").trim())
-          .filter(Boolean)
-      : [];
-
-    return NextResponse.json({
-      title: title.replace(/^Title:\s*/i, "").trim(),
-      content: content
-        .replace(/Moral lesson:.*$/i, "")
-        .replace(/Suggested illustrations:.*$/i, "")
-        .trim(),
-      moralLesson: extractedMoralLesson,
-      suggestedIllustrations,
-      language
-    });
+    const parsedContent = JSON.parse(jsonContent);
+  
+  return NextResponse.json({
+    title: parsedContent.Title,
+    content: parsedContent.Story,
+    moralLesson: parsedContent.MoralLesson,
+    suggestedIllustrations: [parsedContent.CoverIllustrations],
+    language
+  });
 
   } catch (error) {
     console.error("Story generation error:", error);
