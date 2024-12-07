@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { Anthropic } from "@anthropic-ai/sdk";
+import { generateObject } from 'ai';
+import { z } from 'zod';
+import { anthropic } from '@ai-sdk/anthropic';
 
 if (!process.env.CLAUDE_API_KEY) {
   throw new Error("Missing CLAUDE_API_KEY environment variable");
 }
 
-const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY,
-});
 
 export async function POST(request: Request) {
   try {
@@ -60,51 +59,29 @@ FINAL STORY REQUIREMENTS:
 - Positive, uplifting ending
 - Age-appropriate complexity
 
+Cover Illustration sample prompt: This is a digital illustration depicting a scene of a young boy and three foxes in a whimsical woodland setting. The illustration is characterized by a flat design style, which uses solid colors and clean lines to create a playful and fantastical atmosphere. The focus is on the boy, who is dressed in blue denim overalls with two pockets on each side and red shoes. His expression is one of concern or wonderment. The foxes, in shades of orange and red, are perched on tree branches, creating a sense of curiosity or investigation. The boy stands on a dirt path, surrounded by a variety of greenery including trees, bushes, and foliage. The overall color palette is soft and pastel-like, enhancing the sense of fantasy and warmth in the scene.
+
 Please provide the story in the following JSONformat:
 1. Title
-2. Story - (with proper paragraphs)
+2. Content - (with proper paragraphs)
 3. MoralLesson
-4. CoverIllustrations - (be very creative and descriptive, be very specific on the characters physical appearance and the setting and the style of the illustrations)
+4. CoverIllustration - (be very creative and descriptive, be very specific on the characters physical appearance and the setting and the style of the illustration, should be in English)
 
 Make the story engaging and appropriate for the target age group. The entire story, including title and moral lesson, should be in ${language}.`;
 
     // Call Claude API
-    const response = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
-      max_tokens: 4096,
-      temperature: 0.7,
-      system:
-        "You are a award-winningtalented multilingual children's book author. Create engaging, age-appropriate stories with clear moral lessons. Use simple language and vivid descriptions appropriate for the requested language.",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    const { object } = await generateObject({
+      model: anthropic('claude-3-haiku-20240307'),
+      prompt,
+      schema: z.object({
+        title: z.string(),
+        content: z.string(),
+        moralLesson: z.string(),
+        CoverIllustration: z.string(),
+      }),
     });
 
-    if (!response.content[0] || !('text' in response.content[0])) {
-      throw new Error("Invalid response from Claude API");
-    }
-
-    const storyContent = response.content[0].text;
-
-    console.log('storyContent', storyContent);
-
-    // Parse the story content
-    // Find the first occurrence of '{' and parse from there
-const jsonStartIndex = storyContent.indexOf('{');
-const jsonContent = storyContent.slice(jsonStartIndex);
-    // Extract moral lesson and illustrations if they exist
-    const parsedContent = JSON.parse(jsonContent);
-  
-  return NextResponse.json({
-    title: parsedContent.Title,
-    content: parsedContent.Story,
-    moralLesson: parsedContent.MoralLesson,
-    suggestedIllustrations: [parsedContent.CoverIllustrations],
-    language
-  });
+    return NextResponse.json(object);
 
   } catch (error) {
     console.error("Story generation error:", error);

@@ -77,11 +77,13 @@ export function StoryForm({ onGenerated }: StoryFormProps) {
         body: JSON.stringify(formData),
       });
 
+      console.log('response', response);
+
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate story");
-      }
+      console.log('data', data);
+
+      
 
       setStory(data);
       onGenerated?.();
