@@ -1,255 +1,289 @@
-import { useState, useRef } from "react";
-import {
-  pageTurnSound,
-  bookOpenSound,
-  bookCloseSound,
-} from "@/lib/utils/sound";
-import { Illustration } from "./Illustration";
+'use client'
 
-interface Story {
-  title: string;
-  content: string;
-  moralLesson: string;
-  suggestedIllustrations: string[];
+import { useState, useEffect } from 'react'
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ChevronLeft, ChevronRight, Play, Pause, RotateCcw, Save } from 'lucide-react'
+import { motion, AnimatePresence } from "framer-motion"
+import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
+import { useAudioGeneration } from '@/lib/hooks/useAudioGeneration'
+import { useRouter } from 'next/navigation'
+import { storyService } from '@/lib/services/story.service'
+import { useAuth } from '@/lib/context/AuthContext'
+import { toast } from 'sonner'
+
+interface Page {
+  content: string
+  image: string
+  audioUrl?: string
 }
 
 interface StoryBookProps {
-  story: Story;
+  pages: Page[]
+  title: string
 }
 
-export function StoryBook({ story }: StoryBookProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentSpread, setCurrentSpread] = useState(0);
-  const [flippedPages, setFlippedPages] = useState<number[]>([]);
-  const [hoverPage, setHoverPage] = useState<number | null>(null);
-  const [illustrations, setIllustrations] = useState<Record<number, string>>(
-    {}
-  );
-  const bookRef = useRef<HTMLDivElement>(null);
+export default function StoryBook({ pages, title }: StoryBookProps) {
+  const router = useRouter()
+  const { user } = useAuth()
+  const [currentPage, setCurrentPage] = useState(-1)
+  const [direction, setDirection] = useState(0)
+  const { generateAudio, isGenerating } = useAudioGeneration()
+  const [pageAudios, setPageAudios] = useState<string[]>([])
+  const audioPlayer = useAudioPlayer(pageAudios[currentPage])
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Split content into pages (2 paragraphs per page)
-  const paragraphs = story.content.split("\n").filter((p) => p.trim() !== "");
-  const pages = paragraphs.reduce((acc, paragraph, i) => {
-    const pageIndex = Math.floor(i / 2);
-    if (!acc[pageIndex]) acc[pageIndex] = [];
-    acc[pageIndex].push(paragraph);
-    return acc;
-  }, [] as string[][]);
-
-  const totalPages = pages.length;
-  const totalSpreads = Math.ceil(totalPages / 2);
-
-  const handlePageFlip = (pageIndex: number) => {
-    pageTurnSound.play();
-    const newSpread = Math.floor(pageIndex / 2);
-
-    if (flippedPages.includes(pageIndex)) {
-      setFlippedPages(flippedPages.filter((p) => p < pageIndex));
-      setCurrentSpread(newSpread);
-    } else {
-      const newFlippedPages = Array.from(
-        { length: pageIndex + 1 },
-        (_, i) => i
-      ).filter((p) => !flippedPages.includes(p));
-      setFlippedPages([...flippedPages, ...newFlippedPages]);
-      setCurrentSpread(newSpread + 1);
+  // Generate audio for current page
+  useEffect(() => {
+    const generatePageAudio = async () => {
+      if (currentPage >= 0 && !pageAudios[currentPage] && pages[currentPage]) {
+        const audioUrl = await generateAudio(pages[currentPage].content)
+        setPageAudios(prev => {
+          const newAudios = [...prev]
+          newAudios[currentPage] = audioUrl
+          return newAudios
+        })
+      }
     }
-  };
 
-  const handleBookOpen = () => {
-    bookOpenSound.play();
-    setIsOpen(true);
-    setCurrentSpread(0);
-    setFlippedPages([]);
-  };
+    generatePageAudio()
+  }, [currentPage, pages, pageAudios, generateAudio])
 
-  const handleBookClose = () => {
-    bookCloseSound.play();
-    setIsOpen(false);
-    setCurrentSpread(0);
-    setFlippedPages([]);
-  };
-
-  const isPageVisible = (pageIndex: number) => {
-    const pageSpread = Math.floor(pageIndex / 2);
-    return pageSpread === currentSpread || pageSpread === currentSpread - 1;
-  };
-
-  const getPageNumbers = (pageIndex: number) => {
-    if (pageIndex === 0) {
-      return { front: 1, back: 2 };
+  const goToNextPage = () => {
+    if (currentPage < pages.length - 1) {
+      if (audioPlayer?.pause) audioPlayer.pause()
+      setDirection(1)
+      setCurrentPage(currentPage + 1)
     }
-    return {
-      front: pageIndex * 2 + 1,
-      back: pageIndex * 2 + 2,
-    };
-  };
+  }
 
-  const handleIllustrationGenerated = (pageIndex: number, url: string) => {
-    setIllustrations((prev) => ({
-      ...prev,
-      [pageIndex]: url,
-    }));
-  };
+  const goToPreviousPage = () => {
+    if (currentPage > -1) {
+      if (audioPlayer?.pause) audioPlayer.pause()
+      setDirection(-1)
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  const AudioControls = () => (
+    <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white/90 p-4 rounded-full shadow-lg">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={audioPlayer?.togglePlayPause}
+        disabled={isGenerating || !pageAudios[currentPage]}
+        className="w-12 h-12 rounded-full"
+      >
+        {isGenerating ? (
+          <span className="animate-spin">⏳</span>
+        ) : audioPlayer?.isPlaying ? (
+          <Pause className="h-6 w-6" />
+        ) : (
+          <Play className="h-6 w-6" />
+        )}
+      </Button>
+
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={audioPlayer?.resetAudio}
+        disabled={isGenerating || !pageAudios[currentPage]}
+        className="w-12 h-12 rounded-full"
+      >
+        <RotateCcw className="h-6 w-6" />
+      </Button>
+
+      {pageAudios[currentPage] && (
+        <div className="w-48">
+          <div className="bg-secondary h-2 rounded-full">
+            <motion.div 
+              className="bg-primary h-full rounded-full"
+              style={{ width: `${audioPlayer?.progress ?? 0}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-sm text-muted-foreground mt-1">
+            <span>{formatTime(audioPlayer?.currentTime ?? 0)}</span>
+            <span>{formatTime(audioPlayer?.duration ?? 0)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      const result = await storyService.saveStory({
+        title,
+        pages: pages.map((page, index) => ({
+          content: page.content,
+          image: page.image,
+          audioUrl: pageAudios[index],
+        })),
+        userId: user?.id
+      })
+
+      if (result.success) {
+        toast.success('Story saved successfully!')
+        // Optionally redirect to the story page
+        router.push(`/stories/${result.storyId}`)
+      } else {
+        toast.error('Failed to save story')
+      }
+    } catch (error) {
+      console.error('Error saving story:', error)
+      toast.error('Failed to save story')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Book Cover */}
-      <div
-        className={`transform transition-all duration-1000 perspective-1000 ${
-          isOpen
-            ? "rotate-y-180 opacity-0 pointer-events-none absolute"
-            : "rotate-y-0"
-        }`}
-      >
-        <div
-          className="bg-gradient-to-br from-purple-700 to-pink-600 rounded-lg shadow-2xl p-4 sm:p-8 aspect-[3/4] max-w-sm sm:max-w-2xl mx-auto flex flex-col items-center justify-center cursor-pointer transform preserve-3d backface-hidden hover:scale-105 transition-transform"
-          onClick={handleBookOpen}
-        >
-          <h1 className="text-2xl sm:text-4xl font-bold text-white text-center mb-4 sm:mb-8">
-            {story.title}
-          </h1>
-          <div className="w-2/3 aspect-square bg-white/10 rounded-lg flex items-center justify-center text-white/70 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-            <div className="relative z-10 text-sm sm:text-base text-center p-2">
-              [Cover Illustration Coming Soon]
-            </div>
-          </div>
-          <div className="mt-4 sm:mt-8 text-white/80 text-sm animate-bounce">
-            Click to Open
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-50 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <Card className="relative overflow-hidden bg-white shadow-xl rounded-2xl border-4 border-sky-200">
+          <div className="relative h-[calc(100vh-8rem)]">
+            <AnimatePresence mode="wait" initial={false}>
+              {currentPage === -1 ? (
+                <motion.div
+                  key="cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-gradient-to-br from-sky-400 to-indigo-400"
+                >
+                  <div className="relative h-full">
+                    <img
+                      src={pages[0]?.image || ''}
+                      alt="Book cover"
+                      className="w-full h-full object-cover opacity-50"
+                    />
+                    <motion.div
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.3, duration: 0.8 }}
+                      className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6"
+                    >
+                      <h1 className="text-5xl md:text-7xl font-bold mb-4 text-shadow-lg">
+                        {title}
+                      </h1>
+                      <Button 
+                        onClick={goToNextPage}
+                        size="lg"
+                        className="bg-white text-indigo-600 hover:bg-indigo-50 text-xl px-8 py-6 rounded-full shadow-xl transition-transform hover:scale-105"
+                      >
+                        Start Reading
+                      </Button>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={currentPage}
+                  initial={{ opacity: 0, x: direction > 0 ? 200 : -200 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -200 : 200 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="h-full"
+                >
+                  <div className="flex flex-col h-full">
+                    <motion.div
+                      initial={{ y: -50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="bg-sky-400 p-4 text-white text-center"
+                    >
+                      <h2 className="text-2xl md:text-3xl font-bold text-shadow">{title}</h2>
+                    </motion.div>
 
-      {/* Open Book */}
-      <div
-        ref={bookRef}
-        className={`book transform transition-all duration-1000 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none absolute"
-        }`}
-      >
-        <div className="relative book-shadow">
-          {/* Close Button */}
-          <button
-            onClick={handleBookClose}
-            className="absolute -top-4 right-0 sm:-right-4 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10"
-          >
-            ×
-          </button>
-
-          {/* Navigation */}
-          <div className="flex justify-between items-center mb-4 sm:mb-0 sm:absolute sm:-bottom-12 sm:left-0 sm:right-0 sm:justify-center sm:gap-4">
-            <button
-              onClick={() => {
-                if (currentSpread > 0) {
-                  const lastPageInPrevSpread = currentSpread * 2 - 1;
-                  handlePageFlip(lastPageInPrevSpread);
-                }
-              }}
-              disabled={currentSpread === 0}
-              className={`px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base rounded-lg transition-all ${
-                currentSpread === 0
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-purple-600 text-white hover:bg-purple-700"
-              }`}
-            >
-              Previous
-            </button>
-            <span className="text-gray-600 text-sm sm:text-base">
-              {currentSpread + 1} of {totalSpreads}
-            </span>
-            <button
-              onClick={() => {
-                if (currentSpread < totalSpreads - 1) {
-                  const firstPageInNextSpread = currentSpread * 2;
-                  handlePageFlip(firstPageInNextSpread);
-                }
-              }}
-              disabled={currentSpread === totalSpreads - 1}
-              className={`px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base rounded-lg transition-all ${
-                currentSpread === totalSpreads - 1
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-purple-600 text-white hover:bg-purple-700"
-              }`}
-            >
-              Next
-            </button>
-          </div>
-
-          <div className="flex bg-white rounded-lg shadow-2xl relative">
-            {/* Book Container */}
-            <div className="w-full aspect-[3/4] sm:aspect-[2/1.4] relative">
-              {/* Book Spine */}
-              <div className="hidden sm:block absolute left-1/2 top-0 bottom-0 w-4 book-spine" />
-
-              {/* Pages */}
-              {pages.map((content, index) => {
-                const pageNumbers = getPageNumbers(index);
-                return (
-                  <div
-                    key={index}
-                    className={`page absolute inset-0 ${
-                      flippedPages.includes(index) ? "flipped" : ""
-                    } ${hoverPage === index ? "hover-effect" : ""} ${
-                      isPageVisible(index) ? "z-10" : "-z-10"
-                    }`}
-                    onClick={() => handlePageFlip(index)}
-                    onMouseEnter={() => setHoverPage(index)}
-                    onMouseLeave={() => setHoverPage(null)}
-                  >
-                    {/* Front of the page */}
-                    <div className="page-front p-4 sm:p-8 bg-white">
-                      <div className="prose prose-sm sm:prose-lg h-full overflow-y-auto">
-                        {content.map((paragraph, pIndex) => (
-                          <p key={pIndex} className="text-gray-700 mb-4">
-                            {paragraph}
-                          </p>
-                        ))}
+                    <div className="flex flex-col md:flex-row flex-1">
+                      <div className="w-full md:w-1/2 p-6 bg-gradient-to-br from-sky-50 to-indigo-50">
+                        <div className="h-full rounded-2xl overflow-hidden shadow-2xl border-4 border-sky-200">
+                          <img
+                            src={pages[currentPage]?.image}
+                            alt={`Illustration for page ${currentPage + 1}`}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
                       </div>
-                      <div className="page-number page-number-right text-xs sm:text-sm">
-                        {pageNumbers.front}
+
+                      <div className="w-full md:w-1/2 p-8 md:p-12 flex items-center bg-white">
+                        <p className="text-2xl md:text-3xl leading-relaxed text-indigo-700 font-medium text-center w-full font-['Comic_Sans_MS',_'Comic_Sans',_cursive] tracking-wide">
+                          {pages[currentPage]?.content}
+                        </p>
                       </div>
-                      <div className="hidden sm:block page-turn-hint">→</div>
-                      <div className="page-shadow" />
                     </div>
 
-                    {/* Back of the page */}
-                    <div className="page-back p-4 sm:p-8 bg-gray-50">
-                      {index === totalPages - 1 ? (
-                        <div className="mt-4 sm:mt-8 bg-purple-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-purple-800 mb-2 text-sm sm:text-base">
-                            Moral of the Story
-                          </h3>
-                          <p className="text-purple-700 text-sm sm:text-base">
-                            {story.moralLesson}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="h-full flex items-center justify-center">
-                          <div className="aspect-video w-full max-w-[200px] sm:max-w-md">
-                            <Illustration
-                              prompt={story.suggestedIllustrations[index]}
-                              onIllustrationGenerated={(url) =>
-                                handleIllustrationGenerated(index, url)
-                              }
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <div className="page-number page-number-left text-xs sm:text-sm">
-                        {pageNumbers.back}
-                      </div>
-                      <div className="hidden sm:block page-turn-hint rotate-180">
-                        →
-                      </div>
+                    <div className="flex justify-center gap-4 p-4 bg-white">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={goToPreviousPage}
+                        disabled={currentPage === -1}
+                        className="rounded-full h-14 w-14 p-0 hover:bg-sky-50 bg-white border-2 border-sky-200 shadow-lg transition-transform hover:scale-110"
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft className="h-8 w-8 text-sky-600" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={goToNextPage}
+                        disabled={currentPage === pages.length - 1}
+                        className="rounded-full h-14 w-14 p-0 hover:bg-sky-50 bg-white border-2 border-sky-200 shadow-lg transition-transform hover:scale-110"
+                        aria-label="Next page"
+                      >
+                        <ChevronRight className="h-8 w-8 text-sky-600" />
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
+
+          {currentPage >= 0 && <AudioControls />}
+
+          {currentPage >= 0 && (
+            <div className="h-3 bg-sky-100">
+              <div 
+                className="h-full bg-sky-400 transition-all duration-300 ease-in-out rounded-r-full"
+                style={{ width: `${((currentPage + 1) / pages.length) * 100}%` }}
+              />
+            </div>
+          )}
+
+          {currentPage >= 0 && (
+            <div className="absolute bottom-4 right-4">
+              <Button
+                variant="default"
+                size="lg"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="rounded-full shadow-lg transition-transform hover:scale-105 bg-indigo-600 hover:bg-indigo-700"
+              >
+                {isSaving ? (
+                  <span className="animate-spin mr-2">⏳</span>
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                Save Story
+              </Button>
+            </div>
+          )}
+        </Card>
+
+        {currentPage >= 0 && (
+          <p className="text-center mt-4 text-sky-600 font-medium text-lg">
+            Page {currentPage + 1} of {pages.length}
+          </p>
+        )}
       </div>
     </div>
-  );
+  )
+}
+
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
